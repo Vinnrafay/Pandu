@@ -367,7 +367,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
             </h1>
 
             <p className="text-slate-500 text-xs sm:text-sm max-w-lg mx-auto leading-relaxed">
-              Sistem operasi harian yang memangkas distraksi to-do list tak berujung. Gabungan Rule-of-3 prioritas, jatah belanja dinamis, dan daily habits anti-nol.
+              Sistem operasi harian yang memangkas distraksi to-do list tak berujung. Gabungan Rule-of-3 prioritas, jatah jajan, dan kebiasaan.
             </p>
 
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -450,7 +450,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
               <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-900 flex items-center justify-center">
                 <Wallet size={16} />
               </div>
-              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Batas Jajan Dinamis</h3>
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Batas Jajan</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
                 Ketahui kapan harus berhenti belanja dengan visualisasi kuota real-time dan deteksi instan saat defisit.
               </p>
@@ -486,9 +486,9 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
               <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-900 flex items-center justify-center">
                 <Flame size={16} />
               </div>
-              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Kebiasaan Anti-Nol</h3>
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Kebiasaan</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Jaga streak kebiasaan tanpa putus. Pilih target MIN saat lelah, atau FULL saat kondisi sedang prima.
+                Jaga streak kebiasaan tanpa putus. Pilih target minimal saat lelah, atau full saat kondisi sedang fit.
               </p>
             </div>
 
@@ -561,7 +561,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
               <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-900 flex items-center justify-center">
                 <Inbox size={16} />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">Kotak Tunggu (Buffer)</h3>
+              <h3 className="text-sm font-bold text-slate-900">Kotak Tunggu</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
                 Ide atau tugas tambahan diisolasi di sini agar tidak memecah 3 fokus utama.
               </p>
@@ -653,9 +653,6 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
                 onClick={handleScrollToTop}
                 title="Scroll ke paling atas"
               >
-                <div className="w-8 h-8 rounded-lg bg-white text-slate-900 flex items-center justify-center font-bold">
-                  <Compass size={16} />
-                </div>
                 <span className="text-sm font-bold tracking-tight">Pandu</span>
               </button>
               <p className="text-slate-400 text-xs leading-relaxed">
@@ -681,7 +678,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
                     onClick={(e) => handleNavClick(e, 'solutions')} 
                     className="hover:text-white transition cursor-pointer"
                   >
-                    Batas Jajan Dinamis
+                    Batas Jajan
                   </a>
                 </li>
                 <li>
@@ -690,7 +687,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
                     onClick={(e) => handleNavClick(e, 'solutions')} 
                     className="hover:text-white transition cursor-pointer"
                   >
-                    Daily Habits Anti-Nol
+                    Kebiasaan
                   </a>
                 </li>
                 <li>
@@ -703,34 +700,6 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
                   </a>
                 </li>
               </ul>
-            </div>
-
-            <div className="space-y-2.5">
-              <span className="text-xs font-bold text-white uppercase tracking-wider block">Filosofi</span>
-              <ul className="space-y-1.5 text-slate-400">
-                <li><span>Fokus Satu Layar</span></li>
-                <li><span>Buffer Task Isolation</span></li>
-                <li><span>Deficit Awareness</span></li>
-                <li><span>Zero Administrative Fatigue</span></li>
-              </ul>
-            </div>
-
-            <div className="space-y-2.5">
-              <span className="text-xs font-bold text-white uppercase tracking-wider block">Tech Stack</span>
-              <ul className="space-y-1.5 text-slate-400">
-                <li><span>React & TypeScript</span></li>
-                <li><span>Tailwind CSS</span></li>
-                <li><span>Laravel REST API</span></li>
-                <li><span>PostgreSQL</span></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-            <p>© 2026 Pandu Operations. Dibuat oleh Rafay Arvino Setiawan. Hak Cipta Dilindungi.</p>
-            <div className="flex items-center gap-2 text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[11px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Sistem Operasi Aktif</span>
             </div>
           </div>
 
