@@ -1,15 +1,17 @@
 export interface Priority {
   id: number;
   title: string;
-  slot_number: number | null; // 1, 2, 3 atau null jika di Kotak Tunggu
+  slot_number: number | null;
   status: 'pending' | 'completed' | 'waiting_box';
+  target_time?: string;      // Contoh: "14:30"
+  duration_minutes?: number; // Contoh: 45
 }
 
 export interface Habit {
   id: number;
   name: string;
-  baseline_desc: string; // Target darurat
-  normal_desc: string;   // Target penuh
+  baseline_desc: string;
+  normal_desc: string;
   status: 'none' | 'baseline' | 'normal';
   streak: number;
 }
