@@ -387,7 +387,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
       {/* 3. Section 3 Kartu Pilar */}
       <section id="solutions" className="max-w-6xl mx-auto px-6 py-20 space-y-10 scroll-mt-20">
         <div className="text-center max-w-xl mx-auto space-y-2">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Pilar Utama</span>
+
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
             Dirancang untuk fokus yang tak tergoyahkan
           </h2>
@@ -523,7 +523,6 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
       {/* 4. Bento Grid Fitur Ekosistem */}
       <section id="features" className="max-w-6xl mx-auto px-6 py-16 space-y-8 border-t border-slate-200 scroll-mt-20">
         <div className="text-center max-w-xl mx-auto space-y-2">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Bento Grid</span>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
             Semua kendali dalam satu tempat
           </h2>
