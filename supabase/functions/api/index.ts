@@ -17,10 +17,13 @@ import { serviceClient } from '../_shared/supabase.ts';
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 
-// Hilangkan prefix deploy (/functions/v1/api) bila ada; lokal maupun cloud
-// menghasilkan path kanonis yang sama: /dashboard, /priorities, ...
+// Hilangkan prefix deploy (/functions/v1/api) dan prefix kontrak frontend
+// (/api/v1, lihat PREFIX di src/api/panduService.ts) bila ada; lokal, proxy
+// vite, maupun cloud menghasilkan path kanonis yang sama:
+// /dashboard, /priorities, ...
 function basePath(pathname: string): string {
-  const stripped = pathname.replace(/^\/functions\/v1\/api/, '');
+  const withoutDeploy = pathname.replace(/^\/functions\/v1\/api/, '');
+  const stripped = withoutDeploy.replace(/^\/api\/v1/, '');
   return stripped === '' ? '/' : stripped;
 }
 
