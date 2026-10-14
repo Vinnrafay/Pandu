@@ -3,7 +3,7 @@ export interface Priority {
   title: string;
   slot_number: number | null;
   status: 'pending' | 'completed' | 'waiting_box';
-  target_time?: string;      // Contoh: "14:30"
+  target_time?: string; // Contoh: "14:30"
   duration_minutes?: number; // Contoh: 45
 }
 

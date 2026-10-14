@@ -16,7 +16,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-/* Path Aliases for Shadcn */
+    /* Path Aliases for Shadcn */
     "paths": {
       "@/*": ["./src/*"]
     },

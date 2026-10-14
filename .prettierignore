@@ -1,0 +1,5 @@
+# Legacy monoliths — belum dinormalisasi Prettier.
+# Jalankan `npx prettier --write src/App.tsx src/LandingPage.tsx` satu kali saat siap
+# (diff besar, lakukan terpisah dari perubahan fungsional). Lihat TODO P1 lanjutan.
+src/App.tsx
+src/LandingPage.tsx
