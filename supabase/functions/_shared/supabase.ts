@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Service-role client: dipakai server-side saja, BYPASS RLS.
+// SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY otomatis di-inject Supabase ke
+// Edge Function (reserved, jangan di-set via `secrets set`).
 // JANGAN expose SERVICE_ROLE_KEY ke frontend. Untuk produksi, pertimbangkan
 // RLS policies + anon key agar otorisasi ditegakkan di level database.
 export function serviceClient(): SupabaseClient {

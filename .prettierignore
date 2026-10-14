@@ -3,3 +3,4 @@
 # (diff besar, lakukan terpisah dari perubahan fungsional). Lihat TODO P1 lanjutan.
 src/App.tsx
 src/LandingPage.tsx
+supabase/.temp/

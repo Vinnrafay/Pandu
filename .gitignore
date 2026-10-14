@@ -32,3 +32,4 @@ dist-ssr
 *.local
 
 coding.md
+supabase/.temp/

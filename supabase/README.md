@@ -10,7 +10,8 @@ supabase login
 supabase link --project-ref <project-ref>   # atau: supabase init (baru)
 supabase db push                             # 20261014 constraints, 20261015 guest_tokens
 supabase db execute -f supabase/seed.sql     # opsional: data demo
-supabase secrets set SUPABASE_URL=<url> SUPABASE_SERVICE_ROLE_KEY=<key>
+# TIDAK perlu secrets set untuk SUPABASE_* — URL + service_role key
+# otomatis tersedia di Edge Function. Langsung deploy:
 supabase functions serve api                 # lokal: http://127.0.0.1:54321/functions/v1/api
 supabase functions deploy api
 ```
