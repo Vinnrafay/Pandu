@@ -4,6 +4,31 @@ export interface BrandIconProps {
   className?: string;
 }
 
+/**
+ * Logo resmi Pandu (clean, tanpa background): monogram P geometris
+ * berpadu dengan penunjuk arah kompas emerald.
+ */
+export function PanduLogo({ className = 'size-7' }: BrandIconProps): ReactElement {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M7.5 5.5C7.5 4.67157 8.17157 4 9 4H17C22.2 4 25.5 7.2 25.5 11.8C25.5 16.4 22.2 19.6 17 19.6H12.5V26.5C12.5 27.3284 11.8284 28 11 28H9C8.17157 28 7.5 27.3284 7.5 26.5V5.5ZM12.5 8.6V15H16.8C19.2 15 20.6 13.7 20.6 11.8C20.6 9.9 19.2 8.6 16.8 8.6H12.5Z"
+        fill="currentColor"
+      />
+      <path
+        d="M25.4 19.6L22.5 27.5C22.2 28.2 21.2 28.2 20.9 27.5L19.7 24.3L16.5 23.1C15.8 22.8 15.8 21.8 16.5 21.5L24.4 18.6C25.1 18.3 25.7 18.9 25.4 19.6Z"
+        fill="#10B981"
+      />
+    </svg>
+  );
+}
+
 export function GoogleMeetIcon({ className = 'w-4 h-4' }: BrandIconProps): ReactElement {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -51,12 +76,17 @@ export function TeamsIcon({ className = 'w-4 h-4' }: BrandIconProps): ReactEleme
 
 export function GoogleCalendarIcon({ className = 'w-4 h-4' }: BrandIconProps): ReactElement {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none">
-      <rect width="24" height="24" rx="4" fill="#FFFFFF" stroke="#E2E8F0" />
-      <rect x="3" y="3" width="18" height="6" rx="1" fill="#4285F4" />
-      <text x="12" y="18" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#3C4043">
-        31
-      </text>
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="3.5" fill="#FFFFFF" stroke="#E2E8F0" />
+      <path d="M3 6.5C3 4.567 4.567 3 6.5 3H17.5V7.5H3V6.5Z" fill="#4285F4" />
+      <path d="M17.5 3H17.5C19.433 3 21 4.567 21 6.5V7.5H17.5V3Z" fill="#1967D2" />
+      <path d="M21 7.5V16.5H17.5V7.5H21Z" fill="#FBBC04" />
+      <path d="M3 16.5H17.5V21H6.5C4.567 21 3 19.433 3 17.5V16.5Z" fill="#34A853" />
+      <path d="M17.5 16.5H21L17.5 21V16.5Z" fill="#EA4335" />
+      <path
+        d="M8.4 10.6H11.5L9.9 12.4C10.9 12.5 11.6 13.1 11.6 14C11.6 15 10.8 15.6 9.7 15.6C8.8 15.6 8.2 15.2 7.9 14.6L8.9 14.1C9.1 14.4 9.4 14.6 9.7 14.6C10.2 14.6 10.5 14.3 10.5 13.9C10.5 13.5 10.1 13.2 9.5 13.2H9.1V12.4L10.2 11.4H8.4V10.6ZM14.8 10.6V15.5H13.6V11.8L12.6 12.4V11.3L13.8 10.6H14.8Z"
+        fill="#1E293B"
+      />
     </svg>
   );
 }

@@ -1,4 +1,5 @@
 import { api } from './client';
+import { todayISODate } from '../lib/format';
 import type { DashboardData, Habit, Priority } from '../types/pandu';
 
 export interface ExpenseItem {
@@ -100,10 +101,6 @@ function normalizeDashboard(raw: RawDashboard): BackendDashboardResponse {
     expenses: Array.isArray(raw.expenses) ? raw.expenses : [],
     schedules: Array.isArray(raw.schedules) ? raw.schedules.map(normalizeSchedule) : [],
   };
-}
-
-function todayISODate(): string {
-  return new Date().toISOString().split('T')[0];
 }
 
 export const panduService = {

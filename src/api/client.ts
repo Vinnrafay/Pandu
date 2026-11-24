@@ -19,6 +19,9 @@ export class ApiError extends Error {
 }
 
 function resolveBaseUrl(): string | undefined {
+  // Saat dev lokal (Vite), pakai URL relatif `/api/...` agar request lewat
+  // Vite dev-proxy (vite.config.ts) dan tidak terblokir CORS origin produksi.
+  if (import.meta.env.DEV) return undefined;
   const raw = import.meta.env.VITE_API_URL as string | undefined;
   if (!raw || raw.trim() === '') return undefined;
   return raw.trim().replace(/\/+$/, '');

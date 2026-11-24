@@ -1,3 +1,6 @@
+import type { IconName } from '../lib/iconRegistry';
+import type { TaskCategory } from '../lib/taskCategories';
+
 export interface Priority {
   id: number;
   title: string;
@@ -5,6 +8,9 @@ export interface Priority {
   status: 'pending' | 'completed' | 'waiting_box';
   target_time?: string; // Contoh: "14:30"
   duration_minutes?: number; // Contoh: 45
+  icon?: IconName;
+  category?: TaskCategory;
+  tabId?: string;
 }
 
 export interface Habit {
@@ -14,6 +20,7 @@ export interface Habit {
   normal_desc: string;
   status: 'none' | 'baseline' | 'normal';
   streak: number;
+  icon?: IconName;
 }
 
 export interface DashboardData {

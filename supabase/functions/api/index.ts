@@ -9,64 +9,24 @@
 // - create/update    -> {data: row}
 // - error            -> {status, code, message} dengan HTTP status yang sesuai
 
-import { handleOptions } from '../_shared/cors.ts';
-import { fail, ok, raw } from '../_shared/json.ts';
 import { newToken, requireUserId, type AuthContext } from '../_shared/auth.ts';
+import { handleOptions } from '../_shared/cors.ts';
+import {
+  asIntId,
+  asNumber,
+  asString,
+  basePath,
+  HABIT_LEVELS,
+  isValidISODate,
+  jakartaTime,
+  streakFrom,
+  todayJakarta,
+  validateHabitInput,
+  validatePriorityInput,
+  validateScheduleInput,
+} from '../_shared/domain.ts';
+import { fail, ok, raw } from '../_shared/json.ts';
 import { serviceClient } from '../_shared/supabase.ts';
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
-
-// Hilangkan prefix deploy (/functions/v1/api), prefix kontrak frontend
-// (/api/v1, lihat PREFIX di src/api/panduService.ts), dan prefix nama function
-// (/api — gateway production memangkas /functions/v1 sebelum request sampai
-// ke isolate) bila ada. Diulang sampai stabil agar semua kombinasi — lokal,
-// proxy vite, maupun cloud — menghasilkan path kanonis yang sama:
-// /dashboard, /priorities, ...
-function basePath(pathname: string): string {
-  let path = pathname;
-  for (let i = 0; i < 4; i += 1) {
-    const next = path
-      .replace(/^\/functions\/v1\/api/, '')
-      .replace(/^\/api\/v1/, '')
-      .replace(/^\/api(?=\/|$)/, '');
-    if (next === path) break;
-    path = next;
-  }
-  return path === '' ? '/' : path;
-}
-
-function todayJakarta(): string {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
-}
-
-function jakartaTime(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-    timeZone: 'Asia/Jakarta',
-  }).format(d);
-}
-
-function shiftDay(isoDate: string, delta: number): string {
-  const d = new Date(`${isoDate}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + delta);
-  return d.toISOString().split('T')[0] ?? isoDate;
-}
-
-// Streak = hari beruntun (s/d kemarin bila hari ini belum log) dengan level != 'none'.
-function streakFrom(loggedDays: Set<string>, today: string): number {
-  let cursor = loggedDays.has(today) ? today : shiftDay(today, -1);
-  let streak = 0;
-  while (loggedDays.has(cursor)) {
-    streak += 1;
-    cursor = shiftDay(cursor, -1);
-  }
-  return streak;
-}
 
 async function readJson(req: Request): Promise<Record<string, unknown>> {
   try {
@@ -78,20 +38,6 @@ async function readJson(req: Request): Promise<Record<string, unknown>> {
   return {};
 }
 
-function asString(v: unknown): string | null {
-  return typeof v === 'string' ? v : null;
-}
-
-function asNumber(v: unknown): number | null {
-  return typeof v === 'number' && Number.isFinite(v) ? v : null;
-}
-
-function asIntId(segment: string): number | null {
-  if (!/^\d+$/.test(segment)) return null;
-  const id = Number(segment);
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
-}
-
 // Petakan error PostgREST ke envelope API.
 function dbError(error: { code?: string; message: string }): Response {
   if (error.code === 'PGRST116') {
@@ -100,10 +46,24 @@ function dbError(error: { code?: string; message: string }): Response {
   if (error.code === '23505') {
     return fail(409, 'CONFLICT', 'Data bentrok: slot sudah terisi atau log hari ini sudah ada');
   }
-  if (error.code === '23514' || error.code === '23502' || error.code === '22P02') {
+  if (
+    error.code === '23514' ||
+    error.code === '23502' ||
+    error.code === '22P02' ||
+    error.code === '22007' ||
+    error.code === '22008'
+  ) {
     return fail(400, 'VALIDATION_ERROR', error.message);
   }
   return fail(500, 'INTERNAL_ERROR', 'Database error');
+}
+
+function resolveQueryDate(url: URL): { date?: string; error?: Response } {
+  const date = url.searchParams.get('date') ?? todayJakarta();
+  if (!isValidISODate(date)) {
+    return { error: fail(400, 'VALIDATION_ERROR', 'Query ?date= harus format YYYY-MM-DD') };
+  }
+  return { date };
 }
 
 /* ---------------- dashboard ---------------- */
@@ -113,10 +73,8 @@ async function handleDashboard(
   ctx: AuthContext,
   url: URL,
 ): Promise<Response> {
-  const date = url.searchParams.get('date') ?? todayJakarta();
-  if (!DATE_RE.test(date)) {
-    return fail(400, 'VALIDATION_ERROR', 'Query ?date= harus format YYYY-MM-DD');
-  }
+  const { date, error: dateError } = resolveQueryDate(url);
+  if (dateError !== undefined || date === undefined) return dateError as Response;
 
   const [prioritiesRes, budgetRes, expensesRes, habitsRes, logsRes, schedulesRes] =
     await Promise.all([
@@ -216,15 +174,17 @@ async function handleAuthGuest(
 ): Promise<Response> {
   const body = await readJson(req);
   const rawName = asString(body.name) ?? '';
-  const name = rawName.trim().slice(0, 100) === '' ? 'Tamu' : rawName.trim().slice(0, 100);
+  const trimmed = rawName.trim().slice(0, 100);
+  const name = trimmed === '' ? 'Tamu' : trimmed;
 
   const { data: user, error: userError } = await supabase
     .from('users')
     .insert({ name })
     .select('id,name')
     .single();
-  if (userError !== null || user === null)
+  if (userError !== null || user === null) {
     return dbError(userError ?? { message: 'Insert user gagal' });
+  }
 
   const token = newToken();
   const { error: tokenError } = await supabase
@@ -237,64 +197,28 @@ async function handleAuthGuest(
 
 /* ---------------- priorities ---------------- */
 
-function validPriorityPayload(body: Record<string, unknown>): {
-  title?: string;
-  slot_number?: number | null;
-  target_time?: string;
-  duration_minutes?: number;
-  error?: Response;
-} {
-  const title = asString(body.title)?.trim() ?? '';
-  if (title === '' || title.length > 200) {
-    return { error: fail(400, 'VALIDATION_ERROR', 'title wajib 1-200 karakter') };
-  }
-  const slotRaw = body.slot_number ?? null;
-  const slot_number =
-    slotRaw === null
-      ? null
-      : typeof slotRaw === 'number' && [1, 2, 3].includes(slotRaw)
-        ? slotRaw
-        : -1;
-  if (slot_number === -1) {
-    return { error: fail(400, 'VALIDATION_ERROR', 'slot_number harus null atau 1-3') };
-  }
-  const targetRaw = asString(body.target_time);
-  if (targetRaw !== null && !TIME_RE.test(targetRaw)) {
-    return { error: fail(400, 'VALIDATION_ERROR', 'target_time harus format HH:MM') };
-  }
-  const durRaw = body.duration_minutes ?? null;
-  if (durRaw !== null && !(typeof durRaw === 'number' && durRaw > 0 && durRaw <= 480)) {
-    return { error: fail(400, 'VALIDATION_ERROR', 'duration_minutes harus 1-480') };
-  }
-  return {
-    title,
-    slot_number,
-    target_time: targetRaw ?? undefined,
-    duration_minutes: typeof durRaw === 'number' ? durRaw : undefined,
-  };
-}
-
 async function handleCreatePriority(
   supabase: ReturnType<typeof serviceClient>,
   ctx: AuthContext,
   req: Request,
   url: URL,
 ): Promise<Response> {
-  const parsed = validPriorityPayload(await readJson(req));
-  if (parsed.error !== undefined) return parsed.error;
-  const date = url.searchParams.get('date') ?? todayJakarta();
-  if (!DATE_RE.test(date)) return fail(400, 'VALIDATION_ERROR', 'Query ?date= harus YYYY-MM-DD');
+  const parsed = validatePriorityInput(await readJson(req));
+  if (!parsed.ok) return fail(400, 'VALIDATION_ERROR', parsed.message);
+
+  const { date, error: dateError } = resolveQueryDate(url);
+  if (dateError !== undefined || date === undefined) return dateError as Response;
 
   const { data, error } = await supabase
     .from('priorities')
     .insert({
       user_id: ctx.userId,
       date,
-      title: parsed.title,
-      slot_number: parsed.slot_number,
-      status: parsed.slot_number === null ? 'waiting_box' : 'pending',
-      target_time: parsed.target_time ?? null,
-      duration_minutes: parsed.duration_minutes ?? null,
+      title: parsed.data.title,
+      slot_number: parsed.data.slot_number,
+      status: parsed.data.slot_number === null ? 'waiting_box' : 'pending',
+      target_time: parsed.data.target_time ?? null,
+      duration_minutes: parsed.data.duration_minutes ?? null,
     })
     .select('id,title,slot_number,status,target_time,duration_minutes')
     .single();
@@ -321,16 +245,19 @@ async function handleTogglePriority(
   const next = (row as { status: string }).status === 'completed' ? 'pending' : 'completed';
   const { data, error } = await supabase
     .from('priorities')
-    .update({ status: next })
+    .update({ status: next, updated_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('user_id', ctx.userId)
+    .is('deleted_at', null)
     .select('id,title,slot_number,status,target_time,duration_minutes')
-    .single();
+    .maybeSingle();
   if (error !== null) return dbError(error);
+  if (data === null) return fail(404, 'NOT_FOUND', `Prioritas ${id} tidak ditemukan`);
   return ok(data);
 }
 
-// Best-effort swap Slot 1 <-> waiting item. Unique index mencegah duplikat slot;
-// bila langkah kedua gagal, frontend rollback UI dan user dapat mengulang.
+// Swap Slot 1 <-> waiting item dengan pre-check kedua baris dan kompensasi rollback
+// bila promosi gagal agar Slot 1 tidak ditinggalkan kosong.
 async function handleSwapPriority(
   supabase: ReturnType<typeof serviceClient>,
   ctx: AuthContext,
@@ -339,37 +266,71 @@ async function handleSwapPriority(
 ): Promise<Response> {
   const body = await readJson(req);
   const waitingId = asNumber(body.waiting_id);
-  if (waitingId === null || !Number.isSafeInteger(waitingId)) {
-    return fail(400, 'VALIDATION_ERROR', 'waiting_id harus integer');
+  if (waitingId === null || !Number.isSafeInteger(waitingId) || waitingId <= 0) {
+    return fail(400, 'VALIDATION_ERROR', 'waiting_id harus integer positif');
   }
-  const date = url.searchParams.get('date') ?? todayJakarta();
+  const { date, error: dateError } = resolveQueryDate(url);
+  if (dateError !== undefined || date === undefined) return dateError as Response;
 
-  const { data: slotOne, error: slotError } = await supabase
-    .from('priorities')
-    .select('id')
-    .eq('user_id', ctx.userId)
-    .eq('date', date)
-    .eq('slot_number', 1)
-    .neq('status', 'waiting_box')
-    .is('deleted_at', null)
-    .maybeSingle();
-  if (slotError !== null) return dbError(slotError);
+  const [slotOneRes, waitingRes] = await Promise.all([
+    supabase
+      .from('priorities')
+      .select('id,status')
+      .eq('user_id', ctx.userId)
+      .eq('date', date)
+      .eq('slot_number', 1)
+      .neq('status', 'waiting_box')
+      .is('deleted_at', null)
+      .maybeSingle(),
+    supabase
+      .from('priorities')
+      .select('id')
+      .eq('id', waitingId)
+      .eq('user_id', ctx.userId)
+      .eq('status', 'waiting_box')
+      .is('deleted_at', null)
+      .maybeSingle(),
+  ]);
+
+  if (slotOneRes.error !== null) return dbError(slotOneRes.error);
+  if (waitingRes.error !== null) return dbError(waitingRes.error);
+
+  const slotOne = slotOneRes.data as { id: number; status: string } | null;
   if (slotOne === null) return fail(404, 'NOT_FOUND', 'Slot 1 kosong');
+  if (waitingRes.data === null) {
+    return fail(404, 'NOT_FOUND', 'Tugas kotak tunggu tidak ditemukan');
+  }
 
+  const now = new Date().toISOString();
   const park = await supabase
     .from('priorities')
-    .update({ status: 'waiting_box', slot_number: null })
-    .eq('id', (slotOne as { id: number }).id);
+    .update({ status: 'waiting_box', slot_number: null, updated_at: now })
+    .eq('id', slotOne.id)
+    .eq('user_id', ctx.userId)
+    .is('deleted_at', null);
   if (park.error !== null) return dbError(park.error);
 
   const promote = await supabase
     .from('priorities')
-    .update({ status: 'pending', slot_number: 1 })
+    .update({ status: 'pending', slot_number: 1, date, updated_at: now })
     .eq('id', waitingId)
     .eq('user_id', ctx.userId)
     .eq('status', 'waiting_box')
-    .is('deleted_at', null);
-  if (promote.error !== null) return dbError(promote.error);
+    .is('deleted_at', null)
+    .select('id')
+    .maybeSingle();
+
+  if (promote.error !== null || promote.data === null) {
+    await supabase
+      .from('priorities')
+      .update({ status: slotOne.status, slot_number: 1, updated_at: new Date().toISOString() })
+      .eq('id', slotOne.id)
+      .eq('user_id', ctx.userId);
+
+    if (promote.error !== null) return dbError(promote.error);
+    return fail(404, 'NOT_FOUND', 'Tugas kotak tunggu tidak ditemukan');
+  }
+
   return ok({ swapped: true });
 }
 
@@ -402,7 +363,8 @@ async function handleCreateExpense(
     return fail(400, 'VALIDATION_ERROR', 'amount harus integer > 0');
   }
   const note = (asString(body.note)?.trim() || 'Pengeluaran').slice(0, 200);
-  const date = url.searchParams.get('date') ?? todayJakarta();
+  const { date, error: dateError } = resolveQueryDate(url);
+  if (dateError !== undefined || date === undefined) return dateError as Response;
 
   const { data, error } = await supabase
     .from('expenses')
@@ -438,7 +400,7 @@ async function handleUpsertBudget(
     return fail(400, 'VALIDATION_ERROR', 'limit_amount harus integer > 0');
   }
   const date = asString(body.date) ?? todayJakarta();
-  if (!DATE_RE.test(date)) return fail(400, 'VALIDATION_ERROR', 'date harus YYYY-MM-DD');
+  if (!isValidISODate(date)) return fail(400, 'VALIDATION_ERROR', 'date harus YYYY-MM-DD');
 
   const { error } = await supabase
     .from('budgets')
@@ -449,33 +411,17 @@ async function handleUpsertBudget(
 
 /* ---------------- habits ---------------- */
 
-function validHabitPayload(body: Record<string, unknown>): {
-  fields?: { name: string; baseline_desc: string; normal_desc: string };
-  error?: Response;
-} {
-  const name = asString(body.name)?.trim() ?? '';
-  if (name === '' || name.length > 100) {
-    return { error: fail(400, 'VALIDATION_ERROR', 'name wajib 1-100 karakter') };
-  }
-  return {
-    fields: {
-      name,
-      baseline_desc: (asString(body.baseline_desc)?.trim() || 'Target Minimal').slice(0, 200),
-      normal_desc: (asString(body.normal_desc)?.trim() || 'Target Penuh').slice(0, 200),
-    },
-  };
-}
-
 async function handleCreateHabit(
   supabase: ReturnType<typeof serviceClient>,
   ctx: AuthContext,
   req: Request,
 ): Promise<Response> {
-  const parsed = validHabitPayload(await readJson(req));
-  if (parsed.error !== undefined) return parsed.error;
+  const parsed = validateHabitInput(await readJson(req));
+  if (!parsed.ok) return fail(400, 'VALIDATION_ERROR', parsed.message);
+
   const { data, error } = await supabase
     .from('habits')
-    .insert({ user_id: ctx.userId, ...parsed.fields })
+    .insert({ user_id: ctx.userId, ...parsed.data })
     .select('id,name,baseline_desc,normal_desc')
     .single();
   if (error !== null) return dbError(error);
@@ -488,15 +434,17 @@ async function handleUpdateHabit(
   req: Request,
   id: number,
 ): Promise<Response> {
-  const parsed = validHabitPayload(await readJson(req));
-  if (parsed.error !== undefined) return parsed.error;
+  const parsed = validateHabitInput(await readJson(req));
+  if (!parsed.ok) return fail(400, 'VALIDATION_ERROR', parsed.message);
+
   const { data, error } = await supabase
     .from('habits')
-    .update(parsed.fields)
+    .update(parsed.data)
     .eq('id', id)
     .eq('user_id', ctx.userId)
+    .is('archived_at', null)
     .select('id,name,baseline_desc,normal_desc')
-    .single();
+    .maybeSingle();
   if (error !== null) return dbError(error);
   if (data === null) return fail(404, 'NOT_FOUND', `Habit ${id} tidak ditemukan`);
   return ok(data);
@@ -511,7 +459,8 @@ async function handleDeleteHabit(
     .from('habits')
     .update({ archived_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('user_id', ctx.userId);
+    .eq('user_id', ctx.userId)
+    .is('archived_at', null);
   if (error !== null) return dbError(error);
   return ok({ deleted: true });
 }
@@ -524,17 +473,18 @@ async function handleLogHabit(
 ): Promise<Response> {
   const body = await readJson(req);
   const level = asString(body.level);
-  if (level !== 'none' && level !== 'baseline' && level !== 'normal') {
+  if (level === null || !(HABIT_LEVELS as readonly string[]).includes(level)) {
     return fail(400, 'VALIDATION_ERROR', 'level harus none|baseline|normal');
   }
   const date = asString(body.date) ?? todayJakarta();
-  if (!DATE_RE.test(date)) return fail(400, 'VALIDATION_ERROR', 'date harus YYYY-MM-DD');
+  if (!isValidISODate(date)) return fail(400, 'VALIDATION_ERROR', 'date harus YYYY-MM-DD');
 
   const { data: habit, error: habitError } = await supabase
     .from('habits')
     .select('id')
     .eq('id', id)
     .eq('user_id', ctx.userId)
+    .is('archived_at', null)
     .maybeSingle();
   if (habitError !== null) return dbError(habitError);
   if (habit === null) return fail(404, 'NOT_FOUND', `Habit ${id} tidak ditemukan`);
@@ -547,30 +497,6 @@ async function handleLogHabit(
 }
 
 /* ---------------- schedules ---------------- */
-
-function validSchedulePayload(body: Record<string, unknown>): {
-  fields?: { title: string; date: string; start_time: string; end_time: string; platform: string };
-  error?: Response;
-} {
-  const title = asString(body.title)?.trim() ?? '';
-  if (title === '' || title.length > 200) {
-    return { error: fail(400, 'VALIDATION_ERROR', 'title wajib 1-200 karakter') };
-  }
-  const date = asString(body.date) ?? '';
-  const start_time = asString(body.start_time) ?? '';
-  const end_time = asString(body.end_time) ?? '';
-  if (!DATE_RE.test(date) || !TIME_RE.test(start_time) || !TIME_RE.test(end_time)) {
-    return { error: fail(400, 'VALIDATION_ERROR', 'date/start_time/end_time tidak valid') };
-  }
-  if (end_time <= start_time) {
-    return { error: fail(400, 'VALIDATION_ERROR', 'end_time harus setelah start_time') };
-  }
-  const platform = asString(body.platform) ?? 'calendar';
-  if (!['meet', 'zoom', 'teams', 'calendar'].includes(platform)) {
-    return { error: fail(400, 'VALIDATION_ERROR', 'platform tidak dikenal') };
-  }
-  return { fields: { title, date, start_time, end_time, platform } };
-}
 
 async function scheduleOverlaps(
   supabase: ReturnType<typeof serviceClient>,
@@ -599,15 +525,10 @@ async function handleCreateSchedule(
   ctx: AuthContext,
   req: Request,
 ): Promise<Response> {
-  const parsed = validSchedulePayload(await readJson(req));
-  if (parsed.error !== undefined) return parsed.error;
-  const fields = parsed.fields as {
-    title: string;
-    date: string;
-    start_time: string;
-    end_time: string;
-    platform: string;
-  };
+  const parsed = validateScheduleInput(await readJson(req));
+  if (!parsed.ok) return fail(400, 'VALIDATION_ERROR', parsed.message);
+  const fields = parsed.data;
+
   if (
     await scheduleOverlaps(supabase, ctx.userId, fields.date, fields.start_time, fields.end_time)
   ) {
@@ -628,15 +549,10 @@ async function handleUpdateSchedule(
   req: Request,
   id: number,
 ): Promise<Response> {
-  const parsed = validSchedulePayload(await readJson(req));
-  if (parsed.error !== undefined) return parsed.error;
-  const fields = parsed.fields as {
-    title: string;
-    date: string;
-    start_time: string;
-    end_time: string;
-    platform: string;
-  };
+  const parsed = validateScheduleInput(await readJson(req));
+  if (!parsed.ok) return fail(400, 'VALIDATION_ERROR', parsed.message);
+  const fields = parsed.data;
+
   if (
     await scheduleOverlaps(
       supabase,
@@ -655,7 +571,7 @@ async function handleUpdateSchedule(
     .eq('id', id)
     .eq('user_id', ctx.userId)
     .select('id,title,date,start_time,end_time,platform')
-    .single();
+    .maybeSingle();
   if (error !== null) return dbError(error);
   if (data === null) return fail(404, 'NOT_FOUND', `Agenda ${id} tidak ditemukan`);
   return ok(data);
